@@ -1,0 +1,35 @@
+{
+  "name": "silk-background",
+  "version": "0.4.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "restart-web.ps1",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/z21for99/silk-background.git"
+  },
+  "description": "dsh web-profile client plugin: WebGL silk shader background for the Web GUI. v4: the glass effect rides the official theme service (overrideTokens token layers with light/dark pairs); the node half is a no-op. @deepseek-ai/dsh-client-modules discovers dsh.client, serves /plugins/silk-background/client.js and injects it into the boot manifest; the dsh.bundle.patch declaration lets `dsh plugin --profile web add` wire the entry automatically.",
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "immediately": true
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

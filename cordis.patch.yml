@@ -1,0 +1,18 @@
+# silk-background bundle patch — the layer `dsh plugin --profile web add`
+# appends to the profile's dsh.profile.bundles automatically (declared via
+# package.json dsh.bundle.patch). Applied after every earlier bundle layer,
+# before the profile's own cordis.patch.yml and any --patch overlays.
+#
+# The row makes the loader construct a live fiber for this package; the
+# client-modules scanner then discovers the dsh.client declaration and serves
+# /plugins/silk-background/client.js into the web shell's boot manifest.
+#
+# Uninstall: `dsh plugin --profile web remove silk-background` (the bundle
+# layer and the dependency are removed together). If an older manual install
+# also inserted this id in $DSH_HOME/profiles/web/cordis.patch.yml, delete
+# that insert block first.
+- insert:
+    - id: silk-background
+      name: 'silk-background'
+      config:
+        enabled: true
