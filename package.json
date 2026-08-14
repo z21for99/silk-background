@@ -15,7 +15,8 @@
     "cordis.patch.yml",
     "restart-web.ps1",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "screenshots"
   ],
   "license": "MIT",
   "repository": {

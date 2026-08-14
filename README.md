@@ -17,6 +17,17 @@
 
 ---
 
+## 🖼️ 预览
+
+<div align="center">
+  <table>
+    <tr>
+      <td><img src="screenshots/screenshot-1.png" alt="silk-background 效果展示 1" width="100%" /></td>
+      <td><img src="screenshots/screenshot-2.png" alt="silk-background 效果展示 2" width="100%" /></td>
+    </tr>
+  </table>
+</div>
+
 ## ✨ 特性
 
 **视觉**
