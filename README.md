@@ -5,13 +5,19 @@
 基于官方 web-profile 插件机制（`dsh.client` 声明 + bundle patch 层）实现，
 不修改 dsh 任何源码或前端产物，卸载即还原。
 
+同一份插件同时适用于 **`dsh web`** 和 **DeepSeek Harness 桌面版（GUI）**：
+桌面版的 Electron 主进程用 `desktop` profile 拉起的是同一个 web shell，
+渲染进程的平台标识仍是 `web`，`theme.overrideTokens` 等接口也与 web profile
+完全一致。所以"移植到桌面端"不需要改代码，只需要把包装进对应的 profile
+（见下文「桌面端（GUI）安装」一节）。
+
 <div align="center">
 
 [![dsh-plugin](https://img.shields.io/badge/topic-dsh--plugin-7c3aed?style=flat-square&logo=github)](https://github.com/topics/dsh-plugin)
 [![version](https://img.shields.io/github/package-json/v/z21for99/silk-background?style=flat-square&label=version)](./package.json)
 [![license](https://img.shields.io/github/license/z21for99/silk-background?style=flat-square)](./LICENSE)
 [![dependencies](https://img.shields.io/badge/dependencies-0-22c55e?style=flat-square)]()
-[![platform](https://img.shields.io/badge/platform-dsh%20Web%20GUI-f59e0b?style=flat-square)]()
+[![platform](https://img.shields.io/badge/platform-dsh%20Web%20%2B%20Desktop-f59e0b?style=flat-square)]()
 
 </div>
 
@@ -48,6 +54,10 @@
 - ♿ `prefers-reduced-motion` 适配
 - 🛡️ WebGL 上下文丢失/恢复、主题重同步自愈
 
+**兼容**
+- 💻 `dsh web` 与桌面版（GUI）共用同一份客户端插件，装进对应 profile 即可，
+  代码里没有任何平台分支
+
 **调试**
 - 🐞 URL 加 `?silk-debug` 打开状态面板；控制台可用 `window.__dshSilk`
   （`mode` / `engineStatus` / `setMode(m)`）
@@ -58,7 +68,7 @@
 
 | 工具 | 用途 | 说明 |
 |---|---|---|
-| `dsh` | 宿主 | 任意支持 web profile 的版本（`dsh web` 命令） |
+| `dsh` | 宿主 | 任意支持 web profile 的版本：`dsh web`，或桌面版（`desktop` profile） |
 | `pnpm` | 安装器 | `dsh plugin` 内部把参数转发给 profile 目录下的 pnpm |
 | `git` | 拉取源码 | 仅 `github:` / `git+` 安装方式需要 |
 
@@ -91,6 +101,52 @@ Windows 上可运行本仓库附带的 `restart-web.ps1`：它只会结束命令
    `cordis.patch.yml` 中的 `- insert:` 块
 3. 重启 `dsh web`
 
+## 🖥️ 桌面端（GUI）安装
+
+桌面版和 `dsh web` 跑的是**同一个 Web 壳**：Electron 主进程用
+`dsh-desktop-host` 在本地起一个 webServer，再用 `desktop` profile 拉起同一套
+前端。所以本插件不需要任何移植改动，只是要装进 `desktop` profile，而不是
+`web` profile。
+
+> 已在 Windows 桌面版实测：补丁保存后 1~2 秒背景就出现，**不需要重启 App**。
+> 原因是 `dsh-hmr` 会热重载 profile 配置，`dsh-client-hmr` 再把新的模块行推给
+> 已打开的页面（`entries.sync`）。
+
+**1. 把包拷进 `desktop` profile**
+
+```powershell
+$dst = "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\silk-background"
+New-Item -ItemType Directory -Force $dst | Out-Null
+# 在本仓库根目录执行；screenshots 可以不拷
+Copy-Item .\client.js, .\package.json, .\cordis.patch.yml, .\LICENSE, .\README.md $dst
+Copy-Item .\lib $dst -Recurse
+```
+
+**2. 在 `desktop` profile 的补丁里登记一行**
+
+编辑 `%USERPROFILE%\.dsh\profiles\desktop\cordis.patch.yml`，在末尾追加：
+
+```yaml
+- insert:
+    - id: silk-background
+      name: 'silk-background'
+      config:
+        enabled: true
+```
+
+**3. 让它生效**
+
+保存即生效，通常 1~2 秒后右下角就会出现 `◐` 按钮、页面变成玻璃 + 丝绸。
+没有反应就重启 App 一次（正式版没有「重新加载页面」菜单项，开发版才有）。
+调试可以按 `F12` 打开开发者工具，控制台里看 `window.__dshSilk`。
+
+> 若本机 PATH 里有 `dsh` CLI，也可以走和 web 端相同的命令，把 `--profile web`
+> 换成 `--profile desktop`：`dsh plugin --profile desktop add github:z21for99/silk-background`。
+> 手动拷贝的好处是不需要 pnpm、不需要联网。
+
+**卸载**：删掉上面那段 `- insert:` 块，再删掉
+`node_modules\silk-background` 目录；同样 1~2 秒内还原，没生效就重启 App。
+
 ## 🎛️ 使用
 
 - 右下角按钮：`✕`(off) → `◐`(dim) → `◉`(vivid) 循环
@@ -98,6 +154,10 @@ Windows 上可运行本仓库附带的 `restart-web.ps1`：它只会结束命令
 - 调参只影响本机浏览器（`localStorage`），换浏览器/清缓存即恢复默认
 - 亮色主题（Settings → Appearance → Light）下会使用对应的浅色玻璃值；
   丝绸预设本身偏暗色系，亮色下观感更淡，可自行用 RGB 取色板调亮
+- web 端和桌面端是**两个不同的 origin**，`localStorage` 不互通：模式 / 速度 /
+  强度 / 配色要两边各自调一次（清缓存也会回到默认）
+- 已知观感问题：桌面壳底部比 web 端多一条状态栏（步数 / token 统计），右下角
+  两个圆钮会压在它上面；功能不受影响
 
 ## 🗑️ 卸载
 
@@ -105,6 +165,9 @@ Windows 上可运行本仓库附带的 `restart-web.ps1`：它只会结束命令
 dsh plugin --profile web remove silk-background
 # 重启 dsh web
 ```
+
+桌面端如果是手动安装的：删掉 `profiles\desktop\cordis.patch.yml` 里那段
+`- insert:` 块，再删除 `profiles\desktop\node_modules\silk-background` 目录。
 
 ## 🔄 从旧的手工安装迁移
 
@@ -128,6 +191,9 @@ dsh-client-modules 扫描到 dsh.client 声明 → 打包进 window.__DSH_BOOT__
 theme.overrideTokens 注册玻璃化 token 层（v4）
 ```
 
+web 端与桌面端走的是同一条链路，差别只在 profile 目录
+（`profiles/web` vs `profiles/desktop`），浏览器半边是完全相同的产物。
+
 ## 🤝 反馈与贡献
 
 - 使用问题 / 建议：开 [Issue](../../issues)
@@ -144,6 +210,10 @@ WebGL "Silk" 着色器来自 21st.dev Shader Builder，其使用条款以 21st.d
 
 - **看不到背景**：地址栏加 `?silk-debug` 看面板里的 `gl`/`vars` 行；
   控制台 `window.__dshSilk.engineStatus`；确认浏览器支持 WebGL
+- **桌面端装了没反应**：确认包在
+  `%USERPROFILE%\.dsh\profiles\desktop\node_modules\silk-background`、补丁写在
+  `profiles\desktop\cordis.patch.yml`（不是 `profiles\web`）；保存补丁后等 1~2 秒，
+  还不行就重启 App；按 `F12` 在开发者工具控制台里看 `window.__dshSilk`
 - **点击按钮无反应**：确认安装后重启过 `dsh web`（引导清单在启动时生成），
   并硬刷新浏览器（Ctrl+F5）
 - **页面变全透明**：`dim`/`vivid` 模式下 `--dsw-alias-bg-base` 被设为
